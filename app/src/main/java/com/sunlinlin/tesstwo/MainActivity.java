@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
                 Uri source = data.getData();
                 bitmapResult = null;
                 try {
-                    //这里直接读取原图大小，可能会因为大图OOM.
+                    //这里直接读取原图大小，可能会因为大图OOM.应该要压缩一下的
                     bitmapResult = MediaStore.Images.Media.getBitmap(getContentResolver(), source);
                     iv.setImageBitmap(bitmapResult);
                 } catch (IOException e) {
