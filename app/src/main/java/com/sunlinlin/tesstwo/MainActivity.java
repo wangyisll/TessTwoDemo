@@ -1,19 +1,20 @@
 package com.sunlinlin.tesstwo;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,24 +22,27 @@ import android.widget.TextView;
 import com.googlecode.tesseract.android.TessBaseAPI;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.sunlinlin.tesstwo.SDUtils.assets2SD;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private Button btn;
     private TextView tv;
+    private ImageView iv;
 
     private ViewPager vp;
     private MyPagerAdapter adapter;
     private List<ImageView> list;
     private int[] ids = new int[]{R.drawable.chaxun, R.drawable.fan, R.drawable.fengying,
-            R.drawable.meishi, R.drawable.mj, R.drawable.mjn, R.drawable.quanbu, R.drawable.tupian, R.drawable.yingyu, R.drawable.zheng};
+            R.drawable.meishi, R.drawable.mj, R.drawable.mjn, R.drawable.quanbu, R.drawable.tupian, R.drawable.yingyu, R.drawable.zheng,
+            R.drawable.xingming, R.drawable.minzu};
+
+    private Button btn_pick;
 
     /**
      * TessBaseAPI初始化用到的第一个参数，是个目录。
@@ -66,18 +70,20 @@ public class MainActivity extends AppCompatActivity {
      */
     private static final int PERMISSION_REQUEST_CODE = 0;
 
+    private static final int PICK_REQUEST_CODE = 10;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         btn = (Button) findViewById(R.id.btn);
+        btn_pick = (Button) findViewById(R.id.btn_pick);
         tv = (TextView) findViewById(R.id.tv);
+        iv = (ImageView) findViewById(R.id.iv);
         vp = (ViewPager) findViewById(R.id.vp);
         initList();
-        adapter = new MyPagerAdapter();
+        adapter = new MyPagerAdapter(list);
         vp.setAdapter(adapter);
-
-
 
 
         if (Build.VERSION.SDK_INT >= 23) {
@@ -88,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         //Android6.0之前安装时就能复制，6.0之后要先请求权限，所以6.0以上的这个方法无用。
-        copyToSD(LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
+        assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
 
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -100,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.i(TAG, "run: kaishi " + startTime);
 
                         Bitmap bitmap = BitmapFactory.decodeResource(getResources(), ids[vp.getCurrentItem()]);
-                        Log.i(TAG, "run: bitmap " + System.currentTimeMillis());
+
 
                         TessBaseAPI tessBaseAPI = new TessBaseAPI();
 
@@ -110,13 +116,15 @@ public class MainActivity extends AppCompatActivity {
                         String text = tessBaseAPI.getUTF8Text();
                         long finishTime = System.currentTimeMillis();
                         Log.i(TAG, "run: jieshu " + finishTime);
-                        Log.i(TAG, "run: text "+text);
-                        text = text +"\r\n"+" 耗时"+(finishTime-startTime)+"毫秒";
+                        Log.i(TAG, "run: text " + text);
+                        text = text + "\r\n" + " 耗时" + (finishTime - startTime) + "毫秒";
                         final String finalText = text;
+                        final Bitmap finalBitmap = bitmap;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 tv.setText(finalText);
+                                //iv.setImageBitmap(finalBitmap);
                             }
                         });
 
@@ -126,71 +134,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        btn_pick.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*");
+                startActivityForResult(intent, PICK_REQUEST_CODE);
+            }
+        });
+
     }
 
     private void initList() {
         list = new ArrayList<>();
         for (int i = 0; i < ids.length; i++) {
             ImageView imageView = new ImageView(this);
+            imageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             imageView.setImageResource(ids[i]);
             list.add(imageView);
         }
 
     }
 
-    /**
-     * 将assets中的识别库复制到SD卡中
-     *
-     * @param path 要存放在SD卡中的 完整的文件名。这里是"/storage/emulated/0//tessdata/chi_sim.traineddata"
-     * @param name assets中的文件名 这里是 "chi_sim.traineddata"
-     */
-    public void copyToSD(String path, String name) {
-        Log.i(TAG, "copyToSD: " + path);
-        Log.i(TAG, "copyToSD: " + name);
-
-        //如果存在就删掉
-        File f = new File(path);
-        if (f.exists()) {
-            f.delete();
-        }
-        if (!f.exists()) {
-            File p = new File(f.getParent());
-            if (!p.exists()) {
-                p.mkdirs();
-            }
-            try {
-                f.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        InputStream is = null;
-        OutputStream os = null;
-        try {
-            is = this.getAssets().open(name);
-            File file = new File(path);
-            os = new FileOutputStream(file);
-            byte[] bytes = new byte[2048];
-            int len = 0;
-            while ((len = is.read(bytes)) != -1) {
-                os.write(bytes, 0, len);
-            }
-            os.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (is != null)
-                    is.close();
-                if (os != null)
-                    os.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 
     /**
      * 请求到权限后在这里复制识别库
@@ -206,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
             case PERMISSION_REQUEST_CODE:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.i(TAG, "onRequestPermissionsResult: copy");
-                    copyToSD(LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
+                    assets2SD(getApplicationContext(),LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
                 }
                 break;
             default:
@@ -214,28 +178,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class MyPagerAdapter extends PagerAdapter {
-
-        @Override
-        public int getCount() {
-            return list.size();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode==RESULT_OK){
+            if (requestCode==PICK_REQUEST_CODE){
+                Uri source = data.getData();
+                Bitmap bitmap1=null;
+                try {
+                  bitmap1 =  MediaStore.Images.Media.getBitmap(getContentResolver(),source);
+                    iv.setImageBitmap(bitmap1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
-
-        @Override
-        public boolean isViewFromObject(View view, Object object) {
-            return view == object;
-        }
-
-        @Override
-        public void destroyItem(ViewGroup container, int position, Object object) {
-            container.removeView((View) object);
-        }
-
-        @Override
-        public ImageView instantiateItem(ViewGroup container, int position) {
-            container.addView(list.get(position));
-            return list.get(position);
-        }
-
     }
 }
