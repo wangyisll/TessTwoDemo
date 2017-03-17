@@ -170,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
             case PERMISSION_REQUEST_CODE:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.i(TAG, "onRequestPermissionsResult: copy");
-                    assets2SD(getApplicationContext(),LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
+                    assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
                 }
                 break;
             default:
@@ -178,15 +178,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    Bitmap bitmapResult;
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode==RESULT_OK){
-            if (requestCode==PICK_REQUEST_CODE){
+        if (resultCode == RESULT_OK) {
+            if (requestCode == PICK_REQUEST_CODE) {
                 Uri source = data.getData();
-                Bitmap bitmap1=null;
+                bitmapResult = null;
                 try {
-                  bitmap1 =  MediaStore.Images.Media.getBitmap(getContentResolver(),source);
-                    iv.setImageBitmap(bitmap1);
+                    //这里直接读取原图大小，可能会因为大图OOM.
+                    bitmapResult = MediaStore.Images.Media.getBitmap(getContentResolver(), source);
+                    iv.setImageBitmap(bitmapResult);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
