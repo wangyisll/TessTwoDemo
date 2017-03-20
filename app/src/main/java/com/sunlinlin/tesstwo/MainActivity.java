@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView resultTv;
     private CropView cropView;
 
-    private ViewPager vp;
+    private ViewPager viewPager;
     private MyPagerAdapter adapter;
     private List<ImageView> list;
     private int[] ids = new int[]{R.drawable.chaxun, R.drawable.fan, R.drawable.fengying,
@@ -86,6 +86,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private int cropWidth;
 
+    float lastX;
+
+    /**
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         resultTv = (TextView) findViewById(R.id.tv);
         cropView = (CropView) findViewById(R.id.iv);
         resultIv = (ImageView) findViewById(R.id.iv_result);
-        vp = (ViewPager) findViewById(R.id.vp);
+        viewPager = (ViewPager) findViewById(R.id.vp);
 
         recBtn.setOnClickListener(this);
         pickBtn.setOnClickListener(this);
@@ -113,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initList();
         adapter = new MyPagerAdapter(list);
-        vp.setAdapter(adapter);
+        viewPager.setAdapter(adapter);
 
 
         if (Build.VERSION.SDK_INT >= 23) {
@@ -127,6 +132,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
 
+
+        //一个可以双指缩放移动的控件，解决滑动冲突
         cropView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -136,6 +143,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else {
                     //不允许ScrollView截断点击事件，点击事件由子View处理
                     scrollView.requestDisallowInterceptTouchEvent(true);
+                }
+                return false;
+            }
+        });
+
+        //解决viewPager的滑动冲突
+        viewPager.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int action = event.getAction();
+
+                if(action == MotionEvent.ACTION_DOWN) {
+                    // 记录点击到ViewPager时候，手指的X坐标
+                    lastX = event.getX();
+                }
+                if(action == MotionEvent.ACTION_MOVE) {
+                    // 超过阈值
+                    if(Math.abs(event.getX() - lastX) > 30f) {
+                        viewPager.setEnabled(false);
+                        scrollView.requestDisallowInterceptTouchEvent(true);
+                    }
+                }
+                if(action == MotionEvent.ACTION_UP) {
+                    // 用户抬起手指，恢复父布局状态
+                    scrollView.requestDisallowInterceptTouchEvent(false);
+                    viewPager.setEnabled(true);
                 }
                 return false;
             }
@@ -226,7 +259,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_rec:
-                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), ids[vp.getCurrentItem()]);
+                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), ids[viewPager.getCurrentItem()]);
                 recognition(bitmap);
                 break;
             case R.id.btn_pick:
