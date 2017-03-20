@@ -9,7 +9,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
@@ -18,22 +17,23 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
+import com.oginotihiro.cropview.CropView;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.sunlinlin.tesstwo.SDUtils.assets2SD;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "MainActivity";
-    private Button btn;
-    private TextView tv;
-    private ImageView iv;
+    private Button recBtn;
+    private TextView resultTv;
+    private CropView cropView;
 
     private ViewPager vp;
     private MyPagerAdapter adapter;
@@ -42,7 +42,9 @@ public class MainActivity extends AppCompatActivity {
             R.drawable.meishi, R.drawable.mj, R.drawable.mjn, R.drawable.quanbu, R.drawable.tupian, R.drawable.yingyu, R.drawable.zheng,
             R.drawable.xingming, R.drawable.minzu};
 
-    private Button btn_pick;
+    private Button pickBtn;
+    private Button widthBtn, heightBtn, cropRecBtn;
+    private ImageView resultIv;
 
     /**
      * TessBaseAPI初始化用到的第一个参数，是个目录。
@@ -72,15 +74,39 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PICK_REQUEST_CODE = 10;
 
+    /**
+     * 截图框的高
+     */
+    private int cropHeight;
+    /**
+     * 截图框的宽
+     */
+    private int cropWidth;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
-        btn = (Button) findViewById(R.id.btn);
-        btn_pick = (Button) findViewById(R.id.btn_pick);
-        tv = (TextView) findViewById(R.id.tv);
-        iv = (ImageView) findViewById(R.id.iv);
+        recBtn = (Button) findViewById(R.id.btn_rec);
+        pickBtn = (Button) findViewById(R.id.btn_pick);
+        widthBtn = (Button) findViewById(R.id.btn_width);
+        heightBtn = (Button) findViewById(R.id.btn_height);
+        cropRecBtn = (Button) findViewById(R.id.btn_crop_rec);
+        resultTv = (TextView) findViewById(R.id.tv);
+        cropView = (CropView) findViewById(R.id.iv);
+        resultIv = (ImageView) findViewById(R.id.iv_result);
         vp = (ViewPager) findViewById(R.id.vp);
+
+        recBtn.setOnClickListener(this);
+        pickBtn.setOnClickListener(this);
+        widthBtn.setOnClickListener(this);
+        heightBtn.setOnClickListener(this);
+        cropRecBtn.setOnClickListener(this);
+
+        resultIv.setVisibility(View.INVISIBLE);
+        cropView.setVisibility(View.INVISIBLE);
+
         initList();
         adapter = new MyPagerAdapter(list);
         vp.setAdapter(adapter);
@@ -94,54 +120,42 @@ public class MainActivity extends AppCompatActivity {
         }
 
         //Android6.0之前安装时就能复制，6.0之后要先请求权限，所以6.0以上的这个方法无用。
+
         assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
 
-        btn.setOnClickListener(new View.OnClickListener() {
+    }
+
+    /**
+     * 识别图像
+     *
+     * @param bitmap
+     */
+    private void recognition(final Bitmap bitmap) {
+        new Thread(new Runnable() {
             @Override
-            public void onClick(View v) {
-                new Thread(new Runnable() {
+            public void run() {
+                long startTime = System.currentTimeMillis();
+                Log.i(TAG, "run: kaishi " + startTime);
+                TessBaseAPI tessBaseAPI = new TessBaseAPI();
+                tessBaseAPI.init(DATAPATH, DEFAULT_LANGUAGE);
+                tessBaseAPI.setImage(bitmap);
+                String text = tessBaseAPI.getUTF8Text();
+                long finishTime = System.currentTimeMillis();
+                Log.i(TAG, "run: jieshu " + finishTime);
+                Log.i(TAG, "run: text " + text);
+                text = text + "\r\n" + " 耗时" + (finishTime - startTime) + "毫秒";
+                final String finalText = text;
+                final Bitmap finalBitmap = bitmap;
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        long startTime = System.currentTimeMillis();
-                        Log.i(TAG, "run: kaishi " + startTime);
-
-                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), ids[vp.getCurrentItem()]);
-
-
-                        TessBaseAPI tessBaseAPI = new TessBaseAPI();
-
-                        tessBaseAPI.init(DATAPATH, DEFAULT_LANGUAGE);
-
-                        tessBaseAPI.setImage(bitmap);
-                        String text = tessBaseAPI.getUTF8Text();
-                        long finishTime = System.currentTimeMillis();
-                        Log.i(TAG, "run: jieshu " + finishTime);
-                        Log.i(TAG, "run: text " + text);
-                        text = text + "\r\n" + " 耗时" + (finishTime - startTime) + "毫秒";
-                        final String finalText = text;
-                        final Bitmap finalBitmap = bitmap;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                tv.setText(finalText);
-                                //iv.setImageBitmap(finalBitmap);
-                            }
-                        });
-
-                        tessBaseAPI.end();
+                        resultTv.setText(finalText);
+                        cropView.setImageBitmap(finalBitmap);
                     }
-                }).start();
+                });
+                tessBaseAPI.end();
             }
-        });
-
-        btn_pick.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*");
-                startActivityForResult(intent, PICK_REQUEST_CODE);
-            }
-        });
-
+        }).start();
     }
 
     private void initList() {
@@ -154,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
-
 
     /**
      * 请求到权限后在这里复制识别库
@@ -178,21 +191,51 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    Bitmap bitmapResult;
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             if (requestCode == PICK_REQUEST_CODE) {
                 Uri source = data.getData();
-                bitmapResult = null;
-                try {
-                    //这里直接读取原图大小，可能会因为大图OOM.应该要压缩一下的
-                    bitmapResult = MediaStore.Images.Media.getBitmap(getContentResolver(), source);
-                    iv.setImageBitmap(bitmapResult);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                cropHeight = 1;
+                cropWidth = 1;
+                cropView.setVisibility(View.VISIBLE);
+                resultIv.setVisibility(View.INVISIBLE);
+                cropView.of(source).withAspect(cropWidth,cropHeight).initialize(MainActivity.this);
             }
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_rec:
+                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), ids[vp.getCurrentItem()]);
+                recognition(bitmap);
+                break;
+            case R.id.btn_pick:
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*");
+                startActivityForResult(intent, PICK_REQUEST_CODE);
+                break;
+            case R.id.btn_height:
+                cropHeight++;
+                cropView.setHeight(cropHeight);
+                break;
+            case R.id.btn_width:
+                cropWidth++;
+                cropView.setWidth(cropWidth);
+                break;
+            case R.id.btn_crop_rec:
+                if (cropView.getVisibility()!=View.VISIBLE){
+                    Toast.makeText(getApplicationContext(),"先选一张图片",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Bitmap bt = cropView.getOutput();
+                cropView.setVisibility(View.INVISIBLE);
+                resultIv.setVisibility(View.VISIBLE);
+                resultIv.setImageBitmap(bt);
+                recognition(bt);
+                break;
+
         }
     }
 }
