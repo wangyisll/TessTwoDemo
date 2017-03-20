@@ -344,7 +344,7 @@ public class CropView extends ImageView implements ViewTreeObserver.OnGlobalLayo
                 handled = true;
             }
         }
-        return handled;
+        return true;
     }
 
     @Override

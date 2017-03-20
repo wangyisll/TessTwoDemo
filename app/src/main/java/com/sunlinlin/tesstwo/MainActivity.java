@@ -13,9 +13,12 @@ import android.support.annotation.NonNull;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,7 +48,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button pickBtn;
     private Button widthBtn, heightBtn, cropRecBtn;
     private ImageView resultIv;
-
+    private ScrollView scrollView;
     /**
      * TessBaseAPI初始化用到的第一个参数，是个目录。
      */
@@ -86,8 +89,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
+        scrollView = (ScrollView) findViewById(R.id.sv);
         recBtn = (Button) findViewById(R.id.btn_rec);
         pickBtn = (Button) findViewById(R.id.btn_pick);
         widthBtn = (Button) findViewById(R.id.btn_width);
@@ -123,6 +127,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
 
+        cropView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    //允许ScrollView截断点击事件，ScrollView可滑动
+                    scrollView.requestDisallowInterceptTouchEvent(false);
+                } else {
+                    //不允许ScrollView截断点击事件，点击事件由子View处理
+                    scrollView.requestDisallowInterceptTouchEvent(true);
+                }
+                return false;
+            }
+        });
     }
 
     /**
@@ -200,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 cropWidth = 1;
                 cropView.setVisibility(View.VISIBLE);
                 resultIv.setVisibility(View.INVISIBLE);
-                cropView.of(source).withAspect(cropWidth,cropHeight).initialize(MainActivity.this);
+                cropView.of(source).withAspect(cropWidth, cropHeight).initialize(MainActivity.this);
             }
         }
     }
@@ -225,8 +242,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 cropView.setWidth(cropWidth);
                 break;
             case R.id.btn_crop_rec:
-                if (cropView.getVisibility()!=View.VISIBLE){
-                    Toast.makeText(getApplicationContext(),"先选一张图片",Toast.LENGTH_SHORT).show();
+                if (cropView.getVisibility() != View.VISIBLE) {
+                    Toast.makeText(getApplicationContext(), "先选一张图片", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 Bitmap bt = cropView.getOutput();
