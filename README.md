@@ -7,4 +7,5 @@
 
 最近加了一个自己训练的识别库，用来测试的，只能识别没几个字。可以跟原来的中文识别库比较，识别速度提高非常大，有需要的话可以自己训练识别库的。
 
+ [tesseract ocr训练样本库 识别字库](http://blog.csdn.net/qq_25806863/article/details/67637567) 
 ![](http://privateimage.oss-cn-hongkong.aliyuncs.com/Sjms/shoujijieping.png)
