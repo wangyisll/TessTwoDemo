@@ -213,11 +213,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void run() {
                 String text="";
                 if (!checkTraineddataExists()){
-                    text+=LANGUAGE_PATH+"不存在，开始复制";
+                    text+=LANGUAGE_PATH+"不存在，开始复制\r\n";
                     Log.i(TAG, "run: "+LANGUAGE_PATH+"不存在，开始复制\r\n");
                     assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
                 }
-                text+=LANGUAGE_PATH+"已经存在，开始识别";
+                text+=LANGUAGE_PATH+"已经存在，开始识别\r\n";
                 Log.i(TAG, "run: "+LANGUAGE_PATH+"已经存在，开始识别\r\n");
                 long startTime = System.currentTimeMillis();
                 Log.i(TAG, "run: kaishi " + startTime);
