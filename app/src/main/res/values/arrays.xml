@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="traineddata">
+        <item>选择识别库</item>
+        <item>chi_sim</item>
+        <item>eng</item>
+        <item>normal </item>
+    </string-array>
+</resources>

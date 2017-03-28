@@ -26,6 +26,7 @@
                 android:id="@+id/iv_result"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
+                android:scaleType="center"
                 android:visibility="gone"/>
         </RelativeLayout>
 
@@ -53,6 +54,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="选择图片" />
+            <Spinner
+                android:id="@+id/sp_traineddata"
+                android:entries="@array/traineddata"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
         </LinearLayout>
 
         <LinearLayout

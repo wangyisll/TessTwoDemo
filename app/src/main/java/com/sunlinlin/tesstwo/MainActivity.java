@@ -16,9 +16,11 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,12 +45,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private List<ImageView> list;
     private int[] ids = new int[]{R.drawable.chaxun, R.drawable.fan, R.drawable.fengying,
             R.drawable.meishi, R.drawable.mj, R.drawable.mjn, R.drawable.quanbu, R.drawable.tupian, R.drawable.yingyu, R.drawable.zheng,
-            R.drawable.xingming, R.drawable.minzu};
+            R.drawable.xingming, R.drawable.minzu,R.drawable.zengzhi,R.drawable.wode};
 
     private Button pickBtn;
     private Button widthBtn, heightBtn, cropRecBtn;
     private ImageView resultIv;
     private ScrollView scrollView;
+    private Spinner traineddataSp;
+
+    private BitmapUtils bitmapUtils = new BitmapUtils();
+
     /**
      * TessBaseAPI初始化用到的第一个参数，是个目录。
      */
@@ -60,15 +66,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * TessBaseAPI初始化测第二个参数，就是识别库的名字不要后缀名。
      */
-    private static final String DEFAULT_LANGUAGE = "chi_sim";
+    private static String DEFAULT_LANGUAGE = "chi_sim";
     /**
      * assets中的文件名
      */
-    private static final String DEFAULT_LANGUAGE_NAME = DEFAULT_LANGUAGE + ".traineddata";
+    private static  String DEFAULT_LANGUAGE_NAME = DEFAULT_LANGUAGE + ".traineddata";
     /**
      * 保存到SD卡中的完整文件名
      */
-    private static final String LANGUAGE_PATH = tessdata + File.separator + DEFAULT_LANGUAGE_NAME;
+    private static  String LANGUAGE_PATH = tessdata + File.separator + DEFAULT_LANGUAGE_NAME;
 
     /**
      * 权限请求值
@@ -107,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         cropView = (CropView) findViewById(R.id.iv);
         resultIv = (ImageView) findViewById(R.id.iv_result);
         viewPager = (ViewPager) findViewById(R.id.vp);
+        traineddataSp = (Spinner) findViewById(R.id.sp_traineddata);
 
         recBtn.setOnClickListener(this);
         pickBtn.setOnClickListener(this);
@@ -120,7 +127,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initList();
         adapter = new MyPagerAdapter(list);
         viewPager.setAdapter(adapter);
-
 
         if (Build.VERSION.SDK_INT >= 23) {
             if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
@@ -174,6 +180,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return false;
             }
         });
+
+        traineddataSp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String[] array = getResources().getStringArray(R.array.traineddata);
+                if (position==0){
+                    DEFAULT_LANGUAGE=array[1];
+                }else {
+                    DEFAULT_LANGUAGE = array[position];
+                }
+                DEFAULT_LANGUAGE_NAME = DEFAULT_LANGUAGE + ".traineddata";
+                LANGUAGE_PATH = tessdata + File.separator + DEFAULT_LANGUAGE_NAME;
+                Toast.makeText(getApplicationContext(),array[position],Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
     }
 
     /**
@@ -185,12 +211,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         new Thread(new Runnable() {
             @Override
             public void run() {
+                String text="";
+                if (!checkTraineddataExists()){
+                    text+=LANGUAGE_PATH+"不存在，开始复制";
+                    Log.i(TAG, "run: "+LANGUAGE_PATH+"不存在，开始复制\r\n");
+                    assets2SD(getApplicationContext(), LANGUAGE_PATH, DEFAULT_LANGUAGE_NAME);
+                }
+                text+=LANGUAGE_PATH+"已经存在，开始识别";
+                Log.i(TAG, "run: "+LANGUAGE_PATH+"已经存在，开始识别\r\n");
                 long startTime = System.currentTimeMillis();
                 Log.i(TAG, "run: kaishi " + startTime);
                 TessBaseAPI tessBaseAPI = new TessBaseAPI();
                 tessBaseAPI.init(DATAPATH, DEFAULT_LANGUAGE);
                 tessBaseAPI.setImage(bitmap);
-                String text = tessBaseAPI.getUTF8Text();
+                 text =text+"识别结果："+ tessBaseAPI.getUTF8Text();
                 long finishTime = System.currentTimeMillis();
                 Log.i(TAG, "run: jieshu " + finishTime);
                 Log.i(TAG, "run: text " + text);
@@ -218,6 +252,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             list.add(imageView);
         }
 
+    }
+
+    public boolean checkTraineddataExists(){
+        File file = new File(LANGUAGE_PATH);
+        return file.exists();
     }
 
     /**
@@ -260,8 +299,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_rec:
-                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), ids[viewPager.getCurrentItem()]);
-                recognition(bitmap);
+                final Bitmap[] bitmap = {BitmapFactory.decodeResource(getResources(), ids[viewPager.getCurrentItem()])};
+                recognition(bitmap[0]);
                 break;
             case R.id.btn_pick:
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*");
@@ -286,7 +325,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 resultIv.setImageBitmap(bt);
                 recognition(bt);
                 break;
-
         }
     }
 }
