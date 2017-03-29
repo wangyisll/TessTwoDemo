@@ -26,7 +26,7 @@
                 android:id="@+id/iv_result"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
-                android:scaleType="center"
+                android:scaleType="centerInside"
                 android:visibility="gone"/>
         </RelativeLayout>
 
